@@ -14,6 +14,10 @@ public class SpaceShipBehavior : MonoBehaviour
     public BlockBehavior[,] allBlocksBehavior;
     public int allBlocksBehaviorLength;
 
+    //Permet de connaitre le block de controle plus simplement
+    [HideInInspector]
+    public GameObject blockCockpit;
+
     void Start()
     {
         allBlocksBehaviorLength = 4;//Mathf.CeilToInt(Mathf.Sqrt(allBlocks.Values.Count));
@@ -73,5 +77,7 @@ public class SpaceShipBehavior : MonoBehaviour
         }
         return (Mathf.Abs(maxOffsetX), Mathf.Abs(maxOffsetY));
     }
+
+
 
 }

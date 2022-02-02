@@ -223,4 +223,25 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
         return true;
     }
 
+    //Permet de savoir si un groupe de block est séparé du cockpit
+    public bool DeepFindIsAlone(GameObject objCockpit)
+    {
+        List<string> seeNeighbour = new List<string>(); //Si récursif à sortir
+
+        foreach(string key in neighbourBlocks.Keys)
+        {
+            if (seeNeighbour.Contains(objCockpit.name)){
+                //Ignore
+                
+            }
+            else
+            {
+                //Récursivité ?
+            }
+        }
+        return true;
+    }
+
+    
+
 }

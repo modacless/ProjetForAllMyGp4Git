@@ -22,14 +22,16 @@ public class DetectionDamage : MonoBehaviour
     {
        
     }
+
     public void OnTriggerEnter2D(Collider2D collision)
     {
         if (selfShip != null)
         {
             if (collision.gameObject.tag == "Bullet")
             {
+                Vector3 closestPoint = collision.ClosestPoint(transform.position);
                 //On cherche quels block sont touché
-                GameObject blockTuch = FindNearestGameObject(collision.transform.position);
+                GameObject blockTuch = FindNearestGameObject(closestPoint);
 
                 Debug.Log(collision.gameObject.name);
                 
@@ -41,7 +43,30 @@ public class DetectionDamage : MonoBehaviour
 
         }
     }
-    
+
+    /*private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (selfShip != null)
+        {
+            if (collision.gameObject.tag == "Bullet")
+            {
+                //On désacitve le collider
+                collision.gameObject.GetComponent<BoxCollider2D>().enabled = false;
+
+                //On cherche quels block sont touché
+                GameObject blockTuch = FindNearestGameObject(collision.contacts[0].point);
+
+                Debug.Log(collision.gameObject.name);
+
+                if (blockTuch.GetComponent(typeof(BlockBehavior)) != null)
+                {
+                    (blockTuch.GetComponent(typeof(BlockBehavior)) as BlockBehavior).HitSignal(0f);
+                }
+            }
+
+        }
+    }*/
+
     //Donne le block le plus proche touché ( parcours chaque block et fais Position du block - position du tir), parcours classique peut-être optimiser
     private GameObject FindNearestGameObject(Vector3 pos)
     {
