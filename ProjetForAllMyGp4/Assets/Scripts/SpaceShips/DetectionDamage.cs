@@ -23,24 +23,45 @@ public class DetectionDamage : MonoBehaviour
        
     }
 
+    public Transform over;
+
     public void OnTriggerEnter2D(Collider2D collision)
     {
         if (selfShip != null)
         {
             if (collision.gameObject.tag == "Bullet")
             {
-                Vector3 closestPoint = collision.ClosestPoint(transform.position);
-                //On cherche quels block sont touché
-                GameObject blockTuch = FindNearestGameObject(closestPoint);
+                over = collision.transform;
 
-                Debug.Log(collision.gameObject.name);
+                Collider2D[] overlaps = Physics2D.OverlapBoxAll(collision.transform.position,new Vector2(1,1),0);
+                Collider2D tuchObject = null;
+
+               for(int i =0; i< overlaps.Length; i++)
+               {
+                    if(overlaps[i].GetComponent(typeof(BlockBehavior)) != null)
+                    {
+                        tuchObject = overlaps[i];
+                        break;
+                    }
+               }
+
+                //On cherche quels block sont touché
+                //GameObject blockTuch = FindNearestGameObject(new Vector3(0,0,0));
                 
-                if(blockTuch.GetComponent(typeof(BlockBehavior)) != null)
+                if(tuchObject.GetComponent(typeof(BlockBehavior)) != null)
                 {
-                    (blockTuch.GetComponent(typeof(BlockBehavior)) as BlockBehavior).HitSignal(0f);
+                    (tuchObject.GetComponent(typeof(BlockBehavior)) as BlockBehavior).HitSignal(0f);
                 }
             }
 
+        }
+    }
+
+    public void OnDrawGizmos()
+    {
+        if(over != null)
+        {
+            Gizmos.DrawCube(over.transform.position, new Vector3(1,0.5f,1));
         }
     }
 

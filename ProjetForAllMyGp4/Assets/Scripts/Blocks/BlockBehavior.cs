@@ -227,7 +227,7 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
     public bool DeepFindIsAlone(GameObject objCockpit)
     {
         List<string> seeNeighbour = new List<string>(); //Si récursif à sortir
-
+        
         foreach(string key in neighbourBlocks.Keys)
         {
             if (seeNeighbour.Contains(objCockpit.name)){
@@ -236,7 +236,7 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
             }
             else
             {
-                //Récursivité ?
+                seeNeighbour.Add(key);
             }
         }
         return true;
