@@ -33,7 +33,8 @@ public class DetectionDamage : MonoBehaviour
             {
                 over = collision.transform;
 
-                Collider2D[] overlaps = Physics2D.OverlapBoxAll(collision.transform.position,new Vector2(1,1),0);
+                //Il faudrait addapter la size, au tir
+                Collider2D[] overlaps = Physics2D.OverlapBoxAll(collision.transform.position,new Vector2(1,0.5f),0);
                 Collider2D tuchObject = null;
 
                for(int i =0; i< overlaps.Length; i++)

@@ -78,6 +78,12 @@ public class SpaceShipBehavior : MonoBehaviour
         return (Mathf.Abs(maxOffsetX), Mathf.Abs(maxOffsetY));
     }
 
+    //Cherche tous les bloques connectés au cockpit, retourne toujours une liste, peut-être vide
+    public List<BlockBehavior> FindUnConnectedBlock()
+    {
+        List<BlockBehavior> unConnectedBlock = new List<BlockBehavior>();
 
+        return unConnectedBlock;
+    }
 
 }
