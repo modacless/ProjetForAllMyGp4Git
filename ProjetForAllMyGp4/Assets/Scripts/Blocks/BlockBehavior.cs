@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public enum direction
 {
@@ -8,6 +9,14 @@ public enum direction
     down,
     left,
     right
+}
+
+public enum NeighboorDirection
+{
+    South,
+    North,
+    West,
+    East
 }
 [RequireComponent(typeof(SpriteRenderer), typeof(BoxCollider2D), typeof(BoxCollider2D))]
 public class BlockBehavior : MonoBehaviour //Parent of all blocks
@@ -25,8 +34,12 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
     protected static int id_toAdd;
     protected bool isAttachToMainShip = false;
 
-    public Dictionary<string,BlockBehavior> neighbourBlocks;
+    //Les clefs sont : nord, sud, est, ouest, en valeurs on a les scripts parents de tous les voisins
+    public Dictionary<NeighboorDirection, BlockBehavior> neighbourBlocks;
     public (int _x, int _y) positionInArray_block;
+
+    //Permet de vérifier quand un block est connecté au cockpit
+    public bool isConnected = true;
     #endregion
 
     #region références
@@ -44,10 +57,13 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
 
     public void Awake()
     {
+        neighbourBlocks = new Dictionary<NeighboorDirection, BlockBehavior>();
+
         //Ajoute les références à la main
         selfCollider = gameObject.GetComponent<BoxCollider2D>();
         selfShip = GetComponentInParent<SpaceShipBehavior>();
         selfRenderer = gameObject.GetComponent<SpriteRenderer>();
+
     }
 
     public virtual void Start()
@@ -65,6 +81,7 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
             selfShip.allBlocks.Add(id_block, gameObject);
 
         id_toAdd++;
+
         //Trouve les voisins du block
         neighbourBlocks = FindBlockNeighbour();
 
@@ -99,51 +116,116 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
 
     private void DestroyBlock()
     {
-        //Met à jour la liste de tous les blocks du vaisseau
-        selfShip.allBlocks.Remove(id_block);
-
-        //Met a jour le tableau contenant tous les blocksBehaviors
-        selfShip.allBlocksBehavior[positionInArray_block._x, positionInArray_block._y] = null;
-
-        //Désactive la collision, pour permettre aux autres blocks de ne plus le reconnaitre
-        gameObject.GetComponent<BoxCollider2D>().enabled = false;
-
-        //Dictionary<string,BlockBehavior> blockNeighbours = new Dictionary<string, BlockBehavior>(neighbourBlocks);
-
-        //Met à jour les voisins
-        foreach (BlockBehavior blockNeighbour in neighbourBlocks.Values)
+        if (isConnected)
         {
-            if (blockNeighbour != null)
+            //Met à jour la liste de tous les blocks du vaisseau
+            selfShip.allBlocks.Remove(id_block);
+
+            //Met a jour le tableau contenant tous les blocksBehaviors
+            selfShip.allBlocksBehavior[positionInArray_block._x, positionInArray_block._y] = null;
+
+            //Désactive la collision, pour permettre aux autres blocks de ne plus le reconnaitre
+            gameObject.GetComponent<BoxCollider2D>().enabled = false;
+
+            //regarde Si un block est séparé du cockpit
+            if (selfShip != null)
             {
-                blockNeighbour.neighbourBlocks = blockNeighbour.FindBlockNeighbour();
-                //Si il n'a pas de voisin, le block n'appartient plus au vaisseau
-                if (blockNeighbour.IsAlone(this.gameObject))
+                if (selfShip.blockCockpit)
                 {
-                    blockNeighbour.transform.parent = null;
+                    selfShip.connectedNeighbour = new List<BlockBehavior>();
+                    selfShip.DeepFindNeighbour(selfShip.blockCockpit.GetComponent<BlockBehavior>(), ref selfShip.connectedNeighbour, this);
                 }
             }
-        }
-        //Détruit le block;
 
-        //Détruit le bloc, si plus d'un bloc, sinon détruit le vaisseau
-        if (selfShip.allBlocks.Values.Count > 1)
-        {
-            Destroy(gameObject);
+            //Liste de tous les bloques déconnectés
+            List<BlockBehavior> blocksToDisconnected = new List<BlockBehavior>();
+
+            //Compare la liste de tous les bloques, avec la liste de tous les voisins connecté
+            foreach (BlockBehavior block in selfShip.allBlocksBehaviorUnorganized)
+            {
+                if (!selfShip.connectedNeighbour.Contains(block))
+                {
+                    blocksToDisconnected.Add(block);
+                }
+            }
+
+            if (blocksToDisconnected.Count > 1)
+            {
+                //On créer un objet parent qui va relier les blocks dérivant entre eux,
+                // On lui ajoute tous les composents d'un vaisseau
+                GameObject craps = Instantiate(new GameObject(), null);
+                Rigidbody2D rbd = craps.AddComponent<Rigidbody2D>();
+                rbd.isKinematic = true;
+                CompositeCollider2D coll = craps.AddComponent<CompositeCollider2D>();
+                coll.isTrigger = true;
+                SpaceShipBehavior spc = craps.AddComponent<SpaceShipBehavior>();
+                DetectionDamage dtD = craps.AddComponent<DetectionDamage>();
+
+                //On déconnecte les blocks
+                foreach (BlockBehavior blockDisconnected in blocksToDisconnected)
+                {
+                    if (blockDisconnected != this)
+                    {
+                        blockDisconnected.isConnected = false;
+                        blockDisconnected.transform.parent = craps.transform;
+                        selfShip.allBlocks.Remove(blockDisconnected.id_block);
+                        selfShip.allBlocksBehaviorUnorganized.Remove(blockDisconnected);
+                        selfShip.allBlocksBehavior[blockDisconnected.positionInArray_block._x, positionInArray_block._y] = null;
+                        spc.allBlocks.Add(blockDisconnected.id_block, blockDisconnected.gameObject);
+                        blockDisconnected.selfShip = spc;
+                        blockDisconnected.selfShip.allBlocksBehaviorUnorganized.Add(this);
+                    }
+                }
+
+            }
+            
+            //Si aucun block n'est à séparer, on enlève le block détruit de la liste désorganisé de tous les blocks
+            selfShip.allBlocksBehaviorUnorganized.Remove(this);
+            
+
+            //Détruit le block, si plus d'un bloc, sinon détruit le vaisseau
+            if (selfShip.allBlocks.Values.Count > 1)
+            {
+                Destroy(gameObject);
+            }
+            else
+            {
+                if (transform.parent.gameObject != null)
+                    Destroy(transform.parent.gameObject);
+            }
         }
         else
         {
-            if(transform.parent.gameObject != null)
-                Destroy(transform.parent.gameObject);
+            selfShip.allBlocks.Remove(id_block);
+            selfShip.allBlocksBehaviorUnorganized.Remove(this);
+            //Met à jour les voisins
+            foreach (BlockBehavior blockNeighbour in neighbourBlocks.Values)
+            {
+                if (blockNeighbour != null)
+                {
+                    blockNeighbour.neighbourBlocks = blockNeighbour.FindBlockNeighbour();
+                }
+            }
+
+            if (selfShip.allBlocks.Values.Count > 1)
+            {
+                Destroy(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject.transform.parent.gameObject);
+            }
+
         }
 
     }
 
     //On va utiliser des raycast pour gagner en performance, et ne pas chercher dans une liste
-    public Dictionary<string, BlockBehavior> FindBlockNeighbour()
+    public Dictionary<NeighboorDirection, BlockBehavior> FindBlockNeighbour()
     {
         //Peut être sortie en paramètre
         float raycastDist = 0.9f;
-        Dictionary<string, BlockBehavior> findNeighbour = new Dictionary<string, BlockBehavior>();
+        Dictionary<NeighboorDirection, BlockBehavior> findNeighbour = new Dictionary<NeighboorDirection, BlockBehavior>();
 
         //Renvoie un dictionnaire remplie de tous les voisins, avec en clef, leur position par rapport au block actuel
         for(int i =0; i < 4; i++)
@@ -161,8 +243,10 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
                             
                             blockTuch = hit.collider.gameObject.GetComponent<BlockBehavior>();
                         }
+
+                        findNeighbour.Add(NeighboorDirection.North, blockTuch);
                     }
-                    findNeighbour.Add("North", blockTuch);
+                    
                     break;
                 case 1:
                     hit = Physics2D.Raycast(transform.position + new Vector3(0, (-selfRenderer.bounds.size.y / 2) - 0.1f, 0), Vector2.down, raycastDist);
@@ -172,8 +256,10 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
                         {
                             blockTuch = hit.collider.gameObject.GetComponent<BlockBehavior>();
                         }
+
+                        findNeighbour.Add(NeighboorDirection.South, blockTuch);
                     }
-                    findNeighbour.Add("South", blockTuch);
+                    
                     break;
                 case 2:
                     hit = Physics2D.Raycast(transform.position + new Vector3((selfRenderer.bounds.size.x / 2) + 0.1f, 0, 0), Vector2.right, raycastDist);
@@ -183,8 +269,9 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
                         {
                             blockTuch = hit.collider.gameObject.GetComponent<BlockBehavior>();
                         }
+                        findNeighbour.Add(NeighboorDirection.East, blockTuch);
                     }
-                    findNeighbour.Add("East", blockTuch);
+                    
                     break;
                 case 3:
                     hit = Physics2D.Raycast(transform.position + new Vector3((-selfRenderer.bounds.size.x / 2) - 0.1f, 0, 0), Vector2.left, raycastDist);
@@ -195,8 +282,8 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
                             blockTuch = hit.collider.gameObject.GetComponent<BlockBehavior>();
 
                         }
+                        findNeighbour.Add(NeighboorDirection.West, blockTuch);
                     }
-                    findNeighbour.Add("West", blockTuch);
                     break;
             }
 
@@ -222,26 +309,5 @@ public class BlockBehavior : MonoBehaviour //Parent of all blocks
         }
         return true;
     }
-
-    //Permet de savoir si un groupe de block est séparé du cockpit
-    public bool DeepFindIsAlone(GameObject objCockpit)
-    {
-        List<string> seeNeighbour = new List<string>(); //Si récursif à sortir
-        
-        foreach(string key in neighbourBlocks.Keys)
-        {
-            if (seeNeighbour.Contains(objCockpit.name)){
-                //Ignore
-                
-            }
-            else
-            {
-                seeNeighbour.Add(key);
-            }
-        }
-        return true;
-    }
-
-    
 
 }

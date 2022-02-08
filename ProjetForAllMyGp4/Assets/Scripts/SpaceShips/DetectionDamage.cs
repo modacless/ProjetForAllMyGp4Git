@@ -23,7 +23,7 @@ public class DetectionDamage : MonoBehaviour
        
     }
 
-    public Transform over;
+    private Transform over;
 
     public void OnTriggerEnter2D(Collider2D collision)
     {
@@ -45,13 +45,13 @@ public class DetectionDamage : MonoBehaviour
                         break;
                     }
                }
-
-                //On cherche quels block sont touché
-                //GameObject blockTuch = FindNearestGameObject(new Vector3(0,0,0));
                 
-                if(tuchObject.GetComponent(typeof(BlockBehavior)) != null)
+                if(tuchObject != null)
                 {
-                    (tuchObject.GetComponent(typeof(BlockBehavior)) as BlockBehavior).HitSignal(0f);
+                    if (tuchObject.GetComponent(typeof(BlockBehavior)) != null)
+                    {
+                        (tuchObject.GetComponent(typeof(BlockBehavior)) as BlockBehavior).HitSignal(0f);
+                    }
                 }
             }
 
@@ -66,28 +66,6 @@ public class DetectionDamage : MonoBehaviour
         }
     }
 
-    /*private void OnCollisionEnter2D(Collision2D collision)
-    {
-        if (selfShip != null)
-        {
-            if (collision.gameObject.tag == "Bullet")
-            {
-                //On désacitve le collider
-                collision.gameObject.GetComponent<BoxCollider2D>().enabled = false;
-
-                //On cherche quels block sont touché
-                GameObject blockTuch = FindNearestGameObject(collision.contacts[0].point);
-
-                Debug.Log(collision.gameObject.name);
-
-                if (blockTuch.GetComponent(typeof(BlockBehavior)) != null)
-                {
-                    (blockTuch.GetComponent(typeof(BlockBehavior)) as BlockBehavior).HitSignal(0f);
-                }
-            }
-
-        }
-    }*/
 
     //Donne le block le plus proche touché ( parcours chaque block et fais Position du block - position du tir), parcours classique peut-être optimiser
     private GameObject FindNearestGameObject(Vector3 pos)

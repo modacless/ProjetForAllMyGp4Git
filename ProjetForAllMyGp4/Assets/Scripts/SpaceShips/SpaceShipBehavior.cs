@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class SpaceShipBehavior : MonoBehaviour
 {
 
     [HideInInspector]
     public Dictionary<int, GameObject> allBlocks = new Dictionary<int, GameObject>();
+    public List<BlockBehavior> allBlocksBehaviorUnorganized = new List<BlockBehavior>();
 
     //Tableau représeantant en 2d dimension, lesblocks behavior
     //les blocks étant rangé de cette manière (0,0), étant en bas à gauche, (max,max) en haut à droite
@@ -18,9 +20,13 @@ public class SpaceShipBehavior : MonoBehaviour
     [HideInInspector]
     public GameObject blockCockpit;
 
+    //Liste contenant tous les blockbehavior attaché au cockpit, se raffraichit juste quand le baisseau est touché,
+    //A chaque fois qu'on utlise DeepFindNeighbour, on doit clear la list
+    public List<BlockBehavior> connectedNeighbour = new List<BlockBehavior>();
+
     void Start()
     {
-        allBlocksBehaviorLength = 4;//Mathf.CeilToInt(Mathf.Sqrt(allBlocks.Values.Count));
+        allBlocksBehaviorLength = 8;//Mathf.CeilToInt(Mathf.Sqrt(allBlocks.Values.Count));
         allBlocksBehavior = new BlockBehavior[allBlocksBehaviorLength, allBlocksBehaviorLength];
 
         FilledAllBlockBehavior();
@@ -49,7 +55,10 @@ public class SpaceShipBehavior : MonoBehaviour
             //Lui donne son véritable emplacement dans le tableau
             blocks.GetComponent<BlockBehavior>().positionInArray_block = (positionInArrayX, positionInArrayY);
             allBlocksBehavior[positionInArrayX, positionInArrayY] = blocks.GetComponent<BlockBehavior>();
-        
+
+            //Ajoute dans une liste non organisé
+            allBlocksBehaviorUnorganized.Add(blocks.GetComponent<BlockBehavior>());
+
         }
 
     }
@@ -82,8 +91,26 @@ public class SpaceShipBehavior : MonoBehaviour
     public List<BlockBehavior> FindUnConnectedBlock()
     {
         List<BlockBehavior> unConnectedBlock = new List<BlockBehavior>();
+        List<BlockBehavior> connectedBlock = new List<BlockBehavior>();
 
         return unConnectedBlock;
     }
 
+    //Permet de connaitre tous les blocks connectées à un block
+    public void DeepFindNeighbour(BlockBehavior objCockpit, ref List<BlockBehavior> seeNeighb, BlockBehavior exception)
+    {
+        if (objCockpit != null)
+        {
+            if (!seeNeighb.Contains(objCockpit) && exception != objCockpit && objCockpit.neighbourBlocks.Count > 0)
+            {
+                connectedNeighbour.Add(objCockpit);
+                foreach (BlockBehavior val in objCockpit.neighbourBlocks.Values)
+                {
+                    DeepFindNeighbour(val,ref seeNeighb, exception);
+                }
+            }
+
+        }
+
+    }
 }
